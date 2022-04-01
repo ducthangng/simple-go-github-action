@@ -170,5 +170,5 @@ jobs:
             docker run -d \
             --restart always \
             --name $(echo $CLIENT_NAME) \
-            -p 3000:3080 \
+            -p 3000:3000 \
             $(echo $REGISTRY)/$(echo $CLIENT_NAME):$(echo $GITHUB_SHA | head -c7)
