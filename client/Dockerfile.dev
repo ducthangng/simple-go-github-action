@@ -1,0 +1,15 @@
+# Dockerfile.dev is used for development stage, at which devs would run and the app autocompile in parralel to the real changes inside the code.
+FROM node:16
+
+WORKDIR /app
+# This step is very important to be executed before copying the rest of the application’s 
+# code to the container. This is because while Docker is building, it creates intermediate 
+# containers for every step/command and caches it. So, if nothing different has been added 
+# to that container, it will use the cached container instead of re-executing that step. 
+# But, if something has changed, it will re-execute every command after the one that changed.
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "start"]

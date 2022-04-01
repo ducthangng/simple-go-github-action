@@ -1,0 +1,21 @@
+version: "3"
+services:
+  server:
+    build: 
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      - ./server:/go/src/app
+    ports:
+      - "8080:8080"
+
+  client:
+    build: ./client
+    command: npm start
+    volumes:
+      - ./client:/usr/src/app
+      # mount node_modules as a workaround for it disappearing
+      # after adding /client as a mounted folder
+      - /usr/src/app/node_modules
+    ports:
+      - "3000:3000"

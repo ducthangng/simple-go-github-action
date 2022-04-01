@@ -1,0 +1,30 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITAL_OCEAN_TOKEN }}
+
+      - name: Login to Digital Ocean Registry
+        uses: docker/login-action@v1
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DIGITAL_OCEAN_TOKEN }}
+          password: ${{ secrets.DIGITAL_OCEAN_TOKEN }}
+
+      - name: Build the Docker image
+        run: docker build -t registry.digitalocean.com/gl-demo/wf:lastest .
+
+      - name: Push to Digital Ocean Registry
+        run: docker push registry.digitalocean.com/gl-demo/wf:lastest
