@@ -150,7 +150,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSHKEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          envs: SERVER_NAME,REGISTRY,{{ secrets.DIGITAL_OCEAN_TOKEN }},GITHUB_SHA
+          envs: CLIENT_NAME,SERVER_NAME,REGISTRY,{{ secrets.DIGITAL_OCEAN_TOKEN }},GITHUB_SHA
           script: |
             # Login to registry
             docker login -u ${{ secrets.DIGITAL_OCEAN_TOKEN }} -p ${{ secrets.DIGITAL_OCEAN_TOKEN }} registry.digitalocean.com
