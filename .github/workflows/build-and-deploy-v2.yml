@@ -17,8 +17,8 @@ on:
 #2
 env:
   REGISTRY: "registry.digitalocean.com/gl-demo"
-  SERVER_NAME: "wf"
-  CLIENT_NAME: "cli"
+  SERVER_NAME: "ic"
+#   CLIENT_NAME: "cli"
   #IMAGE_TAG: "$(echo $GITHUB_SHA | head -c7)"
 
 #3
@@ -76,71 +76,71 @@ jobs:
   #         cd client
   #         npm test
 
-  build_test:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [16.x]
+#   build_test:
+#     # The type of runner that the job will run on
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         node-version: [16.x]
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+#     # Steps represent a sequence of tasks that will be executed as part of the job
+#     steps:
+#       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+#       - uses: actions/checkout@v2
 
-      - name: setup node
-        uses: actions/setup-node@master
-        with:
-          node-version: ${{ matrix.node-version }}
+#       - name: setup node
+#         uses: actions/setup-node@master
+#         with:
+#           node-version: ${{ matrix.node-version }}
 
-      # install applicaion dependencies
-      - name: Install dependencies
-        run: |
-          cd client
-          npm install
-      # build and test the apps
-      - name: build
-        run: |
-          cd client
-          npm run build
-          # npm test
+#       # install applicaion dependencies
+#       - name: Install dependencies
+#         run: |
+#           cd client
+#           npm install
+#       # build and test the apps
+#       - name: build
+#         run: |
+#           cd client
+#           npm run build
+#           # npm test
 
-  push_to_Docker_Hub:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    # build docker image and push to docker hub
-    # only if the app build and test successfully
-    needs: [build_test]
+#   push_to_Docker_Hub:
+#     # The type of runner that the job will run on
+#     runs-on: ubuntu-latest
+#     # build docker image and push to docker hub
+#     # only if the app build and test successfully
+#     needs: [build_test]
 
-    steps:
-      - name: checkout repo
-        uses: actions/checkout@v2
+#     steps:
+#       - name: checkout repo
+#         uses: actions/checkout@v2
 
-      - name: Checkout the repo
-        uses: actions/checkout@v2
+#       - name: Checkout the repo
+#         uses: actions/checkout@v2
 
-      - name: Build container image
-        run: |
-          cd client
-          docker build -t $(echo $REGISTRY)/$(echo $CLIENT_NAME):$(echo $GITHUB_SHA | head -c7) .
+#       - name: Build container image
+#         run: |
+#           cd client
+#           docker build -t $(echo $REGISTRY)/$(echo $CLIENT_NAME):$(echo $GITHUB_SHA | head -c7) .
 
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DIGITAL_OCEAN_TOKEN }}
+#       - name: Install doctl
+#         uses: digitalocean/action-doctl@v2
+#         with:
+#           token: ${{ secrets.DIGITAL_OCEAN_TOKEN }}
 
-      - name: Log in to DigitalOcean Container Registry with short-lived credentials
-        run: doctl registry login --expiry-seconds 600
+#       - name: Log in to DigitalOcean Container Registry with short-lived credentials
+#         run: doctl registry login --expiry-seconds 600
 
-      - name: Remove all old images
-        run: if [ ! -z "$(doctl registry repository list | grep "$(echo $CLIENT_NAME)")" ]; then doctl registry repository delete-manifest $(echo $CLIENT_NAME) $(doctl registry repository list-tags $(echo $CLIENT_NAME) | grep -o "sha.*") --force; else echo "No repository"; fi
+#       - name: Remove all old images
+#         run: if [ ! -z "$(doctl registry repository list | grep "$(echo $CLIENT_NAME)")" ]; then doctl registry repository delete-manifest $(echo $CLIENT_NAME) $(doctl registry repository list-tags $(echo $CLIENT_NAME) | grep -o "sha.*") --force; else echo "No repository"; fi
 
-      - name: Push image to DigitalOcean Container Registry
-        run: docker push $(echo $REGISTRY)/$(echo $CLIENT_NAME):$(echo $GITHUB_SHA | head -c7)
+#       - name: Push image to DigitalOcean Container Registry
+#         run: docker push $(echo $REGISTRY)/$(echo $CLIENT_NAME):$(echo $GITHUB_SHA | head -c7)
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [push_to_Docker_Hub]
+#     needs: [push_to_Docker_Hub]
 
     steps:
       - name: Deploy to Digital Ocean droplet via SSH action
@@ -150,7 +150,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSHKEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          envs: CLIENT_NAME,SERVER_NAME,REGISTRY,{{ secrets.DIGITAL_OCEAN_TOKEN }},GITHUB_SHA
+          envs: SERVER_NAME,REGISTRY,{{ secrets.DIGITAL_OCEAN_TOKEN }},GITHUB_SHA
           script: |
             # Login to registry
             docker login -u ${{ secrets.DIGITAL_OCEAN_TOKEN }} -p ${{ secrets.DIGITAL_OCEAN_TOKEN }} registry.digitalocean.com
@@ -164,6 +164,23 @@ jobs:
             docker run -d \
             --restart always \
             --name $(echo $SERVER_NAME) \
+            -e SERVER_HOST=127.0.0.1 \
+            -e SERVER_PORT=8080 \
+            -e SERVER_READ_TIMEOUT=30 \
+            -e SERVER_READ_HEADER_TIMEOUT=15 \
+            -e SERVER_WRITE_TIMEOUT=10 \
+            -e SERVER_IDLE_TIMEOUT=10 \
+            -e SERVER_MAX_HEADER_BYTES=255 \
+            -e DATABASE_TYPE=mysql \
+            -e DATABASE_USER=doadmin \
+            -e DATABASE_PASSWORD=AVNS_z9UPHGRsneEGvrY \
+            -e DATABASE_HOST=gl-db-demo-do-user-10189051-0.b.db.ondigitalocean.com \
+            -e DATABASE_PORT=25060 \
+            -e DATABASE_NAME=defaultdb \
+            -e DATABASE_SSL_MODE=required \
+            -e COOKIE_DOMAIN=localhost \
+            -e COOKIE_HTTP_ONLY=false \
+            -e COOKIE_SECURE=false \
             -p 8080:8080 \
             $(echo $REGISTRY)/$(echo $SERVER_NAME):$(echo $GITHUB_SHA | head -c7)
             # Run another container
